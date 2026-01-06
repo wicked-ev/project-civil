@@ -246,7 +246,7 @@ class RoofDialog:
             self.result = {
                 'name': self.name_entry.get(),
                 'roof_type': self.type_var.get(),
-                'covering_type': int(self.covering_var.get()),
+                'covering_type': self.covering_var.get(),
                 'area': float(self.area_entry.get())
             }
             self.dialog.destroy()

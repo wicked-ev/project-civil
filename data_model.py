@@ -797,7 +797,7 @@ class Staircase(Component):
     
     def _calculate_materials(self):
         # Standard stair dimensions: 17cm riser, 28cm tread
-        steps = int(self.floor_height / 0.17)
+        steps = max(1, int(self.floor_height / 0.17))
         total_length = steps * 0.28
         
         if self.material == "concrete":
@@ -969,3 +969,73 @@ class Drainage(Component):
             'pipe_diameter': self.pipe_diameter,
             'system_type': self.system_type
         }
+
+
+# Component deserialization helpers
+_COMPONENT_REGISTRY = {
+    'Wall': Wall,
+    'Room': Room,
+    'Floor': Floor,
+    'Building': Building,
+    'Project': Project,
+    'Foundation': Foundation,
+    'Roof': Roof,
+    'Door': Door,
+    'Window': Window,
+    'ElectricalSystem': ElectricalSystem,
+    'PlumbingSystem': PlumbingSystem,
+    'HVACSystem': HVACSystem,
+    'Painting': Painting,
+    'Plastering': Plastering,
+    'Flooring': Flooring,
+    'Staircase': Staircase,
+    'Road': Road,
+    'Drainage': Drainage
+}
+
+
+def component_from_dict(data: Dict) -> Component:
+    """Reconstruct a Component (and its children) from a dict produced by `to_dict()`.
+
+    This deliberately bypasses __init__ and restores attributes so deserialization
+    recreates the original state without triggering default material calculations.
+    """
+    if data is None:
+        return None
+
+    type_name = data.get('type')
+    cls = _COMPONENT_REGISTRY.get(type_name)
+
+    # Fallback to generic Component if unknown type
+    if cls is None:
+        inst = object.__new__(Component)
+    else:
+        inst = object.__new__(cls)
+
+    # Basic attributes
+    inst.id = data.get('id')
+    inst.name = data.get('name', '')
+
+    # Restore properties onto the instance
+    properties = data.get('properties', {}) or {}
+    for k, v in properties.items():
+        setattr(inst, k, v)
+
+    # Restore materials
+    inst.materials = [Material.from_dict(m) for m in data.get('materials', [])]
+
+    # Recursively restore children
+    inst.children = [component_from_dict(c) for c in data.get('children', [])]
+
+    return inst
+
+
+@classmethod
+def project_from_dict(cls, data: Dict) -> 'Project':
+    inst = component_from_dict(data)
+    if not isinstance(inst, Project):
+        raise ValueError('Data does not represent a Project')
+    return inst
+
+# Attach as a classmethod to Project for convenience
+Project.from_dict = project_from_dict

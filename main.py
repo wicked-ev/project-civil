@@ -178,6 +178,17 @@ class ConstructionEstimatorApp:
         self.tree_text = ctk.CTkTextbox(tree_frame, width=350)
         self.tree_text.pack(fill="both", expand=True, pady=5)
 
+        # Selection menu for where to add components
+        self.selection_var = ctk.StringVar(value="Use last (default)")
+        self.selection_map = {}
+        self.selection_menu = ctk.CTkOptionMenu(
+            tree_frame,
+            variable=self.selection_var,
+            values=["Use last (default)"],
+            width=350,
+        )
+        self.selection_menu.pack(pady=5)
+
         # Right panel: Cost summary
         right_panel = ctk.CTkFrame(main_container)
         right_panel.pack(side="right", fill="both", expand=True, padx=(5, 0))
@@ -258,19 +269,43 @@ class ConstructionEstimatorApp:
 
     def _add_room(self):
         """Add a room to the last floor"""
-        if not self.current_project or not self.current_project.children:
-            messagebox.showerror("Error", "Please add a building and floor first!")
-            return
+        # Determine target floor based on selection UI if present
+        target_floor = None
 
-        building = self.current_project.children[-1]
-        if not building.children:
-            messagebox.showerror("Error", "Please add a floor first!")
-            return
+        sel = getattr(self, 'selection_var', None)
+        if sel and sel.get() and sel.get() != "Use last (default)":
+            target = self.selection_map.get(sel.get())
+            if target:
+                # If user selected a Floor directly
+                if isinstance(target, Floor):
+                    target_floor = target
+                # If user selected a Room, add to its parent floor
+                elif isinstance(target, Room):
+                    parent = self._find_parent(self.current_project, target.id)
+                    if isinstance(parent, Floor):
+                        target_floor = parent
+                # If user selected a Building, use its last floor
+                elif isinstance(target, Building):
+                    if target.children and isinstance(target.children[-1], Floor):
+                        target_floor = target.children[-1]
 
-        floor = building.children[-1]
-        if not isinstance(floor, Floor):
-            messagebox.showerror("Error", "Last component is not a floor!")
-            return
+        # Fallback: use last building -> last floor
+        if target_floor is None:
+            if not self.current_project or not self.current_project.children:
+                messagebox.showerror("Error", "Please add a building and floor first!")
+                return
+
+            building = self.current_project.children[-1]
+            if not building.children:
+                messagebox.showerror("Error", "Please add a floor first!")
+                return
+
+            floor = building.children[-1]
+            if not isinstance(floor, Floor):
+                messagebox.showerror("Error", "Last component is not a floor!")
+                return
+
+            target_floor = floor
 
         dialog = RoomDialog(self.root)
         self.root.wait_window(dialog.dialog)
@@ -282,8 +317,20 @@ class ConstructionEstimatorApp:
                 dialog.result["width"],
                 dialog.result["height"],
             )
-            floor.add_child(room)
+            target_floor.add_child(room)
             self._update_displays()
+
+    def _find_parent(self, root: Component, target_id: str):
+        """Find parent of component with id `target_id` in tree rooted at `root`.
+        Returns the parent component or None.
+        """
+        for child in root.children:
+            if getattr(child, 'id', None) == target_id:
+                return root
+            found = self._find_parent(child, target_id)
+            if found:
+                return found
+        return None
 
     def _update_displays(self):
         """Update all display components"""
@@ -296,6 +343,18 @@ class ConstructionEstimatorApp:
         if self.current_project:
             tree_str = self._build_tree_string(self.current_project, 0)
             self.tree_text.insert("1.0", tree_str)
+            # Update selection menu
+            items = self._build_selection_items(self.current_project)
+            values = ["Use last (default)"] + [d for d, _ in items]
+            # rebuild mapping
+            self.selection_map = {d: comp for d, comp in items}
+            try:
+                self.selection_menu.configure(values=values)
+            except Exception:
+                pass
+            # keep current selection if still valid
+            if self.selection_var.get() not in values:
+                self.selection_var.set("Use last (default)")
 
     def _build_tree_string(self, component: Component, level: int) -> str:
         """Recursively build tree string"""
@@ -353,11 +412,25 @@ class ConstructionEstimatorApp:
             try:
                 with open(filename, "r") as f:
                     data = json.load(f)
-                # Note: Full deserialization would need more implementation
-                messagebox.showinfo(
-                    "Info",
-                    "Load functionality requires full deserialization implementation",
-                )
+
+                # Reconstruct full project graph from the saved dict
+                try:
+                    project = Project.from_dict(data)
+                except Exception:
+                    # Fallback: try wrapping inside Project if top-level was nested
+                    project = Project.from_dict({
+                        'id': data.get('id'),
+                        'name': data.get('name', 'Loaded Project'),
+                        'type': data.get('type', 'Project'),
+                        'materials': data.get('materials', []),
+                        'children': data.get('children', []),
+                        'properties': data.get('properties', {})
+                    })
+
+                self.current_project = project
+                self.project_name_var.set(self.current_project.name)
+                self._update_displays()
+                messagebox.showinfo("Success", "Project loaded successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to load: {str(e)}")
 
@@ -603,25 +676,58 @@ class ConstructionEstimatorApp:
     
     def _add_to_last_room_or_floor(self, component):
         """Helper to add component to last room or floor"""
+        # If user selected a target in the UI, add there
+        sel = getattr(self, 'selection_var', None)
+        if sel and sel.get() and sel.get() != "Use last (default)":
+            sel_display = sel.get()
+            target = self.selection_map.get(sel_display)
+            if target:
+                try:
+                    # If target is a Room/Floor/Building/Project, add directly
+                    if isinstance(target, (Room, Floor, Building, Project)):
+                        target.add_child(component)
+                    else:
+                        # generic fallback
+                        target.add_child(component)
+                    self._update_displays()
+                    return
+                except Exception:
+                    # fall through to default behavior
+                    pass
+
+        # Default behavior: add to last building/floor/room as before
         if not self.current_project.children:
             messagebox.showerror("Error", "Please add a building first!")
             return
-        
+
         building = self.current_project.children[-1]
         if not building.children:
             messagebox.showerror("Error", "Please add a floor first!")
             return
-        
+
         floor = building.children[-1]
-        if floor.children:
-            # Add to last room if exists
-            room = floor.children[-1]
+        room = None
+        for child in reversed(floor.children):
+            if isinstance(child, Room):
+                room = child
+                break
+
+        if room is not None:
             room.add_child(component)
         else:
-            # Add to floor if no rooms
             floor.add_child(component)
-        
+
         self._update_displays()
+
+    def _build_selection_items(self, component: Component, path: str = ""):
+        """Return list of (display, component) for selection menu."""
+        items = []
+        cur_path = f"{path}/{component.name}" if path else component.name
+        display = f"{cur_path} ({component.__class__.__name__})"
+        items.append((display, component))
+        for child in component.children:
+            items.extend(self._build_selection_items(child, cur_path))
+        return items
     def _export_csv(self):
         """Export cost breakdown to CSV"""
         if not self.current_project:
