@@ -18,7 +18,6 @@ from dialogs import FoundationDialog, DoorDialog, RoomDialog, RoofDialog, Electr
 # GUI APPLICATION
 # ============================================================================
 
-
 class ConstructionEstimatorApp:
     def __init__(self):
         # Configure appearance
@@ -188,6 +187,12 @@ class ConstructionEstimatorApp:
             width=350,
         )
         self.selection_menu.pack(pady=5)
+
+        # Delete button for selected component
+        ctk.CTkButton(tree_frame, text="Delete Selected", width=350,
+                      fg_color=("#ff6b6b", "#ff4d4d"),
+                      hover_color="#ff7b7b",
+                      command=self._delete_selected).pack(pady=5)
 
         # Right panel: Cost summary
         right_panel = ctk.CTkFrame(main_container)
@@ -728,6 +733,47 @@ class ConstructionEstimatorApp:
         for child in component.children:
             items.extend(self._build_selection_items(child, cur_path))
         return items
+    def _delete_selected(self):
+        """Delete the currently selected component (cascades to children).
+
+        Requires the user to select a specific component from the selection menu
+        (not the default "Use last (default)"). The root Project cannot be deleted.
+        """
+        sel = getattr(self, 'selection_var', None)
+        if not sel or sel.get() == "Use last (default)":
+            messagebox.showerror("Error", "Please select a component to delete from the selection menu.")
+            return
+
+        sel_display = sel.get()
+        target = self.selection_map.get(sel_display)
+        if not target:
+            messagebox.showerror("Error", "Selected component not found. Please refresh and try again.")
+            return
+
+        # Prevent deleting the project root
+        if target is self.current_project:
+            messagebox.showerror("Error", "Cannot delete the root project.")
+            return
+
+        confirm = messagebox.askyesno("Confirm Delete",
+                                      f"Delete '{target.name}' and all its children? This cannot be undone.")
+        if not confirm:
+            return
+
+        try:
+            parent = self._find_parent(self.current_project, target.id)
+            if parent is None:
+                # Shouldn't happen because top-level children have project as parent
+                messagebox.showerror("Error", "Parent not found; cannot delete.")
+                return
+
+            parent.remove_child(target.id)
+            # Reset selection to default to avoid stale references
+            self.selection_var.set("Use last (default)")
+            self._update_displays()
+            messagebox.showinfo("Success", f"'{target.name}' deleted successfully.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to delete component: {str(e)}")
     def _export_csv(self):
         """Export cost breakdown to CSV"""
         if not self.current_project:

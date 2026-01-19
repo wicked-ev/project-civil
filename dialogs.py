@@ -921,6 +921,3 @@ class RoadDialog:
             self.dialog.destroy()
         except ValueError:
             messagebox.showerror("Error", "Please enter valid numbers!")
-
-# Add similar dialogs for: Window, Roof, Electrical, Plumbing, HVAC,
-# Painting, Flooring, Plastering, Staircase, Road, Drainage
