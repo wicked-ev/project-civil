@@ -22,7 +22,7 @@ class ConstructionEstimatorApp:
     def __init__(self):
         # Configure appearance
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        ctk.set_default_color_theme("green")
 
         # Create main window
         self.root = ctk.CTk()
@@ -38,7 +38,7 @@ class ConstructionEstimatorApp:
 
     def _create_menu(self):
         """Create top menu bar"""
-        menu_frame = ctk.CTkFrame(self.root, height=50)
+        menu_frame = ctk.CTkFrame(self.root, height=50, fg_color="#1a1a1a")
         menu_frame.pack(fill="x", padx=10, pady=(10, 0))
 
         ctk.CTkLabel(
@@ -66,27 +66,30 @@ class ConstructionEstimatorApp:
         main_container = ctk.CTkFrame(self.root)
         main_container.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Left panel: Project builder
-        left_panel = ctk.CTkFrame(main_container, width=400)
-        left_panel.pack(side="left", fill="both", expand=False, padx=(0, 5))
-        left_panel.pack_propagate(False)
+        # Left panel: Project builder (scrollable)
+        left_panel_outer = ctk.CTkFrame(main_container, width=380, fg_color="#0a0a0a")
+        left_panel_outer.pack(side="left", fill="both", expand=False, padx=(0, 5))
+        left_panel_outer.pack_propagate(False)
+
+        left_panel = ctk.CTkScrollableFrame(left_panel_outer, fg_color="#0a0a0a")
+        left_panel.pack(fill="both", expand=True)
 
         ctk.CTkLabel(
-            left_panel, text="Project Builder", font=ctk.CTkFont(size=16, weight="bold")
+            left_panel, text="Project Builder", font=ctk.CTkFont(size=16, weight="bold"), text_color="#4CAF50"
         ).pack(pady=10)
 
         # Project info section
         self.project_name_var = ctk.StringVar(value="New Project")
-        ctk.CTkLabel(left_panel, text="Project Name:").pack(pady=(10, 0))
-        ctk.CTkEntry(left_panel, textvariable=self.project_name_var, width=350).pack(
+        ctk.CTkLabel(left_panel, text="Project Name:", text_color="#B0BEC5").pack(pady=(10, 0))
+        ctk.CTkEntry(left_panel, textvariable=self.project_name_var, width=340).pack(
             pady=5
         )
 
         # Quick add section
         quick_add_frame = ctk.CTkScrollableFrame(
             left_panel,
-            height=200,        # fixed visible height
-            width=300          # optional fixed width
+            height=250,        # fixed visible height
+            fg_color="#1a1a1a"
         )
         
         quick_add_frame.pack(padx=10, pady=10, fill="x")
@@ -95,6 +98,7 @@ class ConstructionEstimatorApp:
             quick_add_frame,
             text="Quick Add Components",
             font=ctk.CTkFont(weight="bold"),
+            text_color="#81C784"
         ).pack(pady=5)
 
         ctk.CTkButton(
@@ -108,7 +112,7 @@ class ConstructionEstimatorApp:
         )
 
         ctk.CTkLabel(
-            quick_add_frame, text="Structural", font=ctk.CTkFont(weight="bold")
+            quick_add_frame, text="Structural", font=ctk.CTkFont(weight="bold"), text_color="#81C784"
         ).pack(pady=(10, 5))
         ctk.CTkButton(
             quick_add_frame, text="+ Add Foundation", command=self._add_foundation
@@ -121,7 +125,7 @@ class ConstructionEstimatorApp:
         ).pack(fill="x", pady=2)
 
         ctk.CTkLabel(
-            quick_add_frame, text="Doors & Windows", font=ctk.CTkFont(weight="bold")
+            quick_add_frame, text="Doors & Windows", font=ctk.CTkFont(weight="bold"), text_color="#81C784"
         ).pack(pady=(10, 5))
         ctk.CTkButton(quick_add_frame, text="+ Add Door", command=self._add_door).pack(
             fill="x", pady=2
@@ -132,7 +136,7 @@ class ConstructionEstimatorApp:
 
         # MEP Systems
         ctk.CTkLabel(
-            quick_add_frame, text="MEP Systems", font=ctk.CTkFont(weight="bold")
+            quick_add_frame, text="MEP Systems", font=ctk.CTkFont(weight="bold"), text_color="#81C784"
         ).pack(pady=(10, 5))
         ctk.CTkButton(
             quick_add_frame, text="+ Add Electrical", command=self._add_electrical
@@ -146,7 +150,7 @@ class ConstructionEstimatorApp:
 
         # Finishing
         ctk.CTkLabel(
-            quick_add_frame, text="Finishing", font=ctk.CTkFont(weight="bold")
+            quick_add_frame, text="Finishing", font=ctk.CTkFont(weight="bold"), text_color="#81C784"
         ).pack(pady=(10, 5))
         ctk.CTkButton(
             quick_add_frame, text="+ Add Painting", command=self._add_painting
@@ -160,7 +164,7 @@ class ConstructionEstimatorApp:
 
         # Infrastructure
         ctk.CTkLabel(
-            quick_add_frame, text="Site Works", font=ctk.CTkFont(weight="bold")
+            quick_add_frame, text="Site Works", font=ctk.CTkFont(weight="bold"), text_color="#81C784"
         ).pack(pady=(10, 5))
         ctk.CTkButton(quick_add_frame, text="+ Add Road", command=self._add_road).pack(
             fill="x", pady=2
@@ -169,12 +173,12 @@ class ConstructionEstimatorApp:
             quick_add_frame, text="+ Add Drainage", command=self._add_drainage
         ).pack(fill="x", pady=2)
         # Component tree
-        tree_frame = ctk.CTkFrame(left_panel)
+        tree_frame = ctk.CTkFrame(left_panel, fg_color="#1a1a1a")
         tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        ctk.CTkLabel(tree_frame, text="Project Structure").pack()
+        ctk.CTkLabel(tree_frame, text="Project Structure", text_color="#81C784", font=ctk.CTkFont(weight="bold")).pack()
 
-        self.tree_text = ctk.CTkTextbox(tree_frame, width=350)
+        self.tree_text = ctk.CTkTextbox(tree_frame, width=340)
         self.tree_text.pack(fill="both", expand=True, pady=5)
 
         # Selection menu for where to add components
@@ -184,33 +188,36 @@ class ConstructionEstimatorApp:
             tree_frame,
             variable=self.selection_var,
             values=["Use last (default)"],
-            width=350,
+            width=340,
         )
         self.selection_menu.pack(pady=5)
 
         # Delete button for selected component
-        ctk.CTkButton(tree_frame, text="Delete Selected", width=350,
-                      fg_color=("#ff6b6b", "#ff4d4d"),
-                      hover_color="#ff7b7b",
+        ctk.CTkButton(tree_frame, text="Delete Selected", width=340,
+                      fg_color="#D32F2F",
+                      hover_color="#E53935",
                       command=self._delete_selected).pack(pady=5)
 
-        # Right panel: Cost summary
-        right_panel = ctk.CTkFrame(main_container)
-        right_panel.pack(side="right", fill="both", expand=True, padx=(5, 0))
+        # Right panel: Cost summary (scrollable)
+        right_panel_outer = ctk.CTkFrame(main_container, fg_color="#0a0a0a")
+        right_panel_outer.pack(side="right", fill="both", expand=True, padx=(5, 0))
+
+        right_panel = ctk.CTkScrollableFrame(right_panel_outer, fg_color="#0a0a0a")
+        right_panel.pack(fill="both", expand=True)
 
         ctk.CTkLabel(
-            right_panel, text="Cost Summary", font=ctk.CTkFont(size=16, weight="bold")
+            right_panel, text="Cost Summary", font=ctk.CTkFont(size=16, weight="bold"), text_color="#4CAF50"
         ).pack(pady=10)
 
         # Total cost display
-        cost_display_frame = ctk.CTkFrame(right_panel, fg_color=("gray85", "gray25"))
+        cost_display_frame = ctk.CTkFrame(right_panel, fg_color="#1a1a1a", border_width=2, border_color="#4CAF50")
         cost_display_frame.pack(fill="x", padx=20, pady=10)
 
         ctk.CTkLabel(
-            cost_display_frame, text="Total Project Cost:", font=ctk.CTkFont(size=14)
+            cost_display_frame, text="Total Project Cost:", font=ctk.CTkFont(size=14), text_color="#B0BEC5"
         ).pack(pady=(10, 0))
         self.total_cost_label = ctk.CTkLabel(
-            cost_display_frame, text="$0.00", font=ctk.CTkFont(size=32, weight="bold")
+            cost_display_frame, text="DZD 0.00", font=ctk.CTkFont(size=32, weight="bold")
         )
         self.total_cost_label.pack(pady=(0, 10))
 
@@ -219,9 +226,10 @@ class ConstructionEstimatorApp:
             right_panel,
             text="Material Breakdown",
             font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#81C784"
         ).pack(pady=(10, 5))
 
-        self.breakdown_text = ctk.CTkTextbox(right_panel, height=400)
+        self.breakdown_text = ctk.CTkTextbox(right_panel, height=300)
         self.breakdown_text.pack(fill="both", expand=True, padx=20, pady=5)
 
         # Calculate button
@@ -231,6 +239,8 @@ class ConstructionEstimatorApp:
             command=self._calculate_costs,
             height=40,
             font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#4CAF50",
+            hover_color="#66BB6A"
         ).pack(fill="x", padx=20, pady=10)
 
         # Initialize empty project
@@ -375,7 +385,7 @@ class ConstructionEstimatorApp:
             return
 
         total_cost = self.current_project.calculate_cost()
-        self.total_cost_label.configure(text=f"${total_cost:,.2f}")
+        self.total_cost_label.configure(text=f"DZD {total_cost:,.2f}")
 
         breakdown = self.current_project.get_material_breakdown()
         self.breakdown_text.delete("1.0", "end")
@@ -797,7 +807,7 @@ class ConstructionEstimatorApp:
                         writer.writerow([material, f"{qty:.2f}", ""])
 
                     writer.writerow([])
-                    writer.writerow(["Total Project Cost", "", f"${total_cost:,.2f}"])
+                    writer.writerow(["Total Project Cost", "", f"DZD {total_cost:,.2f}"])
 
                     messagebox.showinfo("Success", "Export completed successfully!")
             except Exception as e:
